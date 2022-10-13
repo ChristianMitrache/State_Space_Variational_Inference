@@ -1,21 +1,21 @@
 import unittest
 
-from Mean_Cov_Models import Variance_Model
+from Mean_Cov_Models import Inverse_Variance_Model
 import torch
-from Block_Functions import compute_block_cholesky
+from Block_Functions import Compute_Block_Cholesky
 
 class Test_Block_Cholesky(unittest.TestCase):
     def test_block_cholesky_diagonal(self):
         B = torch.zeros((9,1,1))
         D = torch.tensor([[[1.]], [[2.]], [[3.]], [[4.]], [[5.]], [[6.]], [[7.]], [[8.]], [[9.]], [[10.]]])
-        chol_tuple = compute_block_cholesky(D, B)
+        chol_tuple = Compute_Block_Cholesky(D, B)
         self.assertTrue(torch.allclose(chol_tuple[0]**2, D) and torch.allclose(chol_tuple[1],B)) # add assertion here
 
     def test_block_cholesky_non_diagonal(self):
         D = torch.exp(torch.rand((10,1,1)))
         B = torch.rand((9,1,1))
         A = torch.diag(torch.squeeze(D)) + torch.diag_embed(torch.squeeze(B),offset  =-1)
-        chol_tuple = compute_block_cholesky(D, B)
+        chol_tuple = Compute_Block_Cholesky(D, B)
         L_block_chol = torch.diag(torch.squeeze(chol_tuple[0])) + torch.diag_embed(torch.squeeze(chol_tuple[1]),offset  =-1)
         L_torch_chol = torch.linalg.cholesky_ex(A)[0]
         self.assertTrue(torch.allclose(L_torch_chol,L_block_chol)) # add assertion here
@@ -29,7 +29,7 @@ class Test_Block_Cholesky(unittest.TestCase):
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
-        chol_tuple = compute_block_cholesky(D, B)
+        chol_tuple = Compute_Block_Cholesky(D, B)
         A = reshape_helper_D(D, B,lower = False)
         L_block_chol = reshape_helper_D(chol_tuple[0],chol_tuple[1],lower = True)
         L_torch_chol = torch.linalg.cholesky_ex(A)[0]
@@ -44,7 +44,7 @@ class Test_Block_Cholesky(unittest.TestCase):
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
-        chol_tuple = compute_block_cholesky(D, B)
+        chol_tuple = Compute_Block_Cholesky(D, B)
         A = reshape_helper_D(D, B,lower = False)
         L_block_chol = reshape_helper_D(chol_tuple[0],chol_tuple[1],lower = True)
         L_torch_chol = torch.linalg.cholesky_ex(A)[0]
@@ -59,7 +59,7 @@ class Test_Block_Cholesky(unittest.TestCase):
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
-        chol_tuple = compute_block_cholesky(D, B)
+        chol_tuple = Compute_Block_Cholesky(D, B)
         A = reshape_helper_D(D, B,lower = False)
         L_block_chol = reshape_helper_D(chol_tuple[0],chol_tuple[1],lower = True)
         L_torch_chol = torch.linalg.cholesky_ex(A)[0]
@@ -86,20 +86,3 @@ def reshape_helper_D(D,B,lower = False):
         return D_block_diag + B_block_full
     else:
         return D_block_diag + B_block_full + B_block_full.T
-
-########################################################################################################
-
-class Test_Variance_Model(unittest.TestCase):
-    def test_variance_model_shapes(self):
-        time = 100
-        xt_dim = 10
-        x = torch.rand((100,10))
-        linear_layers = (7,2,7)
-        non_linearity = torch.nn.ReLU()
-        variance_model = Variance_Model(xt_dim,linear_layers,non_linearity)
-        L_D, L_B = variance_model(x)
-        self.assertTrue(L_B.shape ==(99,10,10) and L_D.shape == (100,10,10))
-
-
-if __name__ == '__main__':
-    unittest.main()

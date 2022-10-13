@@ -3,7 +3,7 @@ import torch
 
 # This file contains important functions for computing block matrix operations without storing the entire matrix.
 
-def compute_block_cholesky(D, B):
+def Compute_Block_Cholesky(D, B):
     """
     This uses recursive relation given from:
     https://en.wikipedia.org/wiki/Block_LU_decomposition#:~:text=Block%20Cholesky%20decomposition&text=is%20a%20matrix%20whose%20elements%20are%20all%20zero.
@@ -30,7 +30,7 @@ def compute_block_cholesky(D, B):
     return (diag_chol_blocks, off_diag_chol_blocks)
 
 
-def block_inverse_solve(D, B, x):
+def Block_Inverse_Solve(D, B, x):
     """
     Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, solve for L^{-1}x where L is cholesky
     decomposition
@@ -43,7 +43,7 @@ def block_inverse_solve(D, B, x):
     # TODO
 
 
-def block_mat_vec(self, D, B, x):
+def Block_Mat_Vec(D, B, x):
     """
     Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, compute matrix vector product
     :param D: cholesky diagonal blocks tensor with shape Txnxn

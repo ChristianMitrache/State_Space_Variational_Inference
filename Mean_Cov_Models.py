@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Block_Functions import compute_block_cholesky
+from Block_Functions import Compute_Block_Cholesky
 
 class Fully_Connected_Model(nn.Module):
     '''
@@ -52,7 +52,7 @@ class Fully_Connected_Mean_Model(Fully_Connected_Model):
     def __init__(self,xt_dim,linear_layer_dims,non_lin_module):
         super().__init__(xt_dim,linear_layer_dims,non_lin_module)
 
-class Variance_Model(nn.Module):
+class Inverse_Variance_Model(nn.Module):
     '''
     Variance model for parameterization 1 of the variational inference for state space models paper.
     models the block diagonal and off-block diagonal matrices for the lower-triangle of the cholesky decomposition
@@ -74,7 +74,7 @@ class Variance_Model(nn.Module):
         Computes forward pass and returns diagonal blocks of block cholesky decomp.
         x should be a Txn tensor.
         returns a tuple of ((Tx n x n), (T-1 x n x n)) matrices representing the block matrices for the lower diagonal
-        matrix.
+        matrix of the inverse covariance.
         """
 
         x = torch.unsqueeze(x, dim=2)
@@ -83,4 +83,4 @@ class Variance_Model(nn.Module):
         # Not sure if it's faster do the unsqueezing below or to just deal with this using masking - will have to test this
         L = torch.tril(L,diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(L,dim1 = 1,dim2=2)),dim = 2)*torch.eye(L.shape[1]))
         D = L@torch.transpose(L,dim0=1,dim1=2)
-        return compute_block_cholesky(D,B)
+        return Compute_Block_Cholesky(D, B)
