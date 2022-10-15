@@ -1,5 +1,5 @@
 import torch
-# import functorch <- I don't need this yet
+from functorch import vmap
 
 # This file contains important functions for computing block matrix operations without storing the entire matrix.
 
@@ -45,11 +45,39 @@ def Block_Inverse_Solve(D, B, x):
 
 def Block_Mat_Vec(D, B, x):
     """
-    Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, compute matrix vector product
+    Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, compute matrix vector product in batches
     :param D: cholesky diagonal blocks tensor with shape Txnxn
     :param B: cholesky off-diagonal blocks with shape (T-1)xnxn
     :param x: tensor with shape mxTxn where m is the batch dimension.
     :return: mxTxn tensor (m is batch dimension).
     """
+    batched_mat_vec_mul = vmap(torch.mv)
 
-    # TODO
+    def batched_fix_D(x):
+        """
+        fixes matrix D so I can batch over x now.
+        :param x: tensor that is Txn
+        :return: returns batched matrix vector product of Dx
+        """
+        return batched_mat_vec_mul(D,x)
+
+    def batched_fix_B(x):
+        """
+        fixes matrix B so I can batch over x now.
+        :param x: tensor that is (T-1)xn
+        :return: returns batched matrix vector product of Bx
+        """
+        return batched_mat_vec_mul(B,x)
+
+    mat_vec_multiply_D = vmap(batched_fix_D)
+    mat_vec_multiply_B = vmap(batched_fix_B)
+    return mat_vec_multiply_D(x) + \
+           torch.cat((torch.zeros((x.shape[0],1,x.shape[2])),mat_vec_multiply_B(x[:,1:,:])),dim =1)
+
+
+    #D = torch.unsqueeze(D,0)
+    #B = torch.unsqueeze(B,0)
+    #x = torch.unsqueeze(x,3)
+    #return torch.sum(D*x,dim = 3) + \
+    #       torch.cat((torch.zeros((x.shape[0],1,x.shape[2])),torch.sum(B*x[:,1:,:,:],dim = 3)),dim = 1)
+

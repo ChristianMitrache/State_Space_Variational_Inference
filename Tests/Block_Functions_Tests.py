@@ -2,7 +2,31 @@ import unittest
 
 from Mean_Cov_Models import Inverse_Variance_Model
 import torch
-from Block_Functions import Compute_Block_Cholesky
+from Block_Functions import Compute_Block_Cholesky,Block_Mat_Vec,Block_Inverse_Solve
+
+
+def reshape_helper_D(D,B,lower = False):
+    """
+    helper function that reshapes tensor of block matrices to bigger matrix. This is for comparing my computed values
+    against torch.
+    :param D: Diagonal Block Tensor: Txnxn
+    :param B: Below Diagonal Block Tensor (T-1)xnxn
+    :return: (nT)x(nT) matrix containing diagonal and off diagonal blocks (which will also be symmetric)
+    """
+    xt_dim = D.shape[1]
+    D_block_diag = torch.block_diag(*torch.split(D.reshape(D.shape[0] * D.shape[1], D.shape[2]), D.shape[1]))
+    B_block_diag = torch.block_diag(*torch.split(B.reshape(B.shape[0] * B.shape[1], B.shape[2]), B.shape[1]))
+    padding_func = torch.nn.ConstantPad2d((0,xt_dim, xt_dim, 0), 0)
+    B_block_full = padding_func(B_block_diag)
+    #B_block_full = torch.concat((torch.zeros(B_block_diag.shape[0] + xt_dim, xt_dim),
+    #                             torch.concat((torch.zeros((xt_dim, B_block_diag.shape[0])),
+    #                                           B_block_diag))), dim=1)
+    if lower:
+        return D_block_diag + B_block_full
+    else:
+        return D_block_diag + B_block_full + B_block_full.T
+
+######################################################################################################################
 
 class Test_Block_Cholesky(unittest.TestCase):
     def test_block_cholesky_diagonal(self):
@@ -66,23 +90,42 @@ class Test_Block_Cholesky(unittest.TestCase):
         print(torch.isclose(L_torch_chol,L_block_chol))
         self.assertTrue(torch.allclose(L_torch_chol,L_block_chol)) # add assertion here
 
-def reshape_helper_D(D,B,lower = False):
+#############################################################################################################
+
+class Test_Block_Mat_Vec(unittest.TestCase):
     """
-    helper function that reshapes tensor of block matrices to bigger matrix. This is for comparing my computed values
-    against torch.
-    :param D: Diagonal Block Tensor: Txnxn
-    :param B: Below Diagonal Block Tensor (T-1)xnxn
-    :return: (nT)x(nT) matrix containing diagonal and off diagonal blocks (which will also be symmetric)
+    Testing the block matrix vector multiplication with values given by torch.
     """
-    xt_dim = D.shape[1]
-    D_block_diag = torch.block_diag(*torch.split(D.reshape(D.shape[0] * D.shape[1], D.shape[2]), D.shape[1]))
-    B_block_diag = torch.block_diag(*torch.split(B.reshape(B.shape[0] * B.shape[1], B.shape[2]), B.shape[1]))
-    padding_func = torch.nn.ConstantPad2d((0,xt_dim, xt_dim, 0), 0)
-    B_block_full = padding_func(B_block_diag)
-    #B_block_full = torch.concat((torch.zeros(B_block_diag.shape[0] + xt_dim, xt_dim),
-    #                             torch.concat((torch.zeros((xt_dim, B_block_diag.shape[0])),
-    #                                           B_block_diag))), dim=1)
-    if lower:
-        return D_block_diag + B_block_full
-    else:
-        return D_block_diag + B_block_full + B_block_full.T
+    def test_block_Mat_Vec_small(self):
+        xt_dim = 2
+        time = 3
+        batch = 2
+        L = torch.rand((time,xt_dim,xt_dim))+5
+        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
+        B = torch.zeros(((time-1,xt_dim,xt_dim)))
+        #B = torch.rand((time-1,xt_dim,xt_dim))+5
+        full_vec = torch.rand((batch, time, xt_dim))
+        mat_vec = Block_Mat_Vec(D, B, full_vec)
+        full_mat = reshape_helper_D(D, B,lower = False)
+        full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
+        full_mat_vec = full_mat@full_vec_squeeze.T
+        mat_vec = torch.reshape(mat_vec,(batch,xt_dim*time))
+        self.assertTrue(torch.allclose(full_mat_vec.T,mat_vec)) # add assertion here
+
+    def test_block_Mat_Vec_big(self):
+        # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
+        xt_dim = 100
+        time = 1000
+        batch = 100
+        L = torch.rand((time,xt_dim,xt_dim))+5
+        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
+        B = torch.zeros(((time-1,xt_dim,xt_dim)))
+        #B = torch.rand((time-1,xt_dim,xt_dim))+5
+        full_vec = torch.rand((batch, time, xt_dim))
+        mat_vec = Block_Mat_Vec(D, B, full_vec)
+        full_mat = reshape_helper_D(D, B,lower = False)
+        full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
+        full_mat_vec = full_mat@full_vec_squeeze.T
+        mat_vec = torch.reshape(mat_vec,(batch,xt_dim*time))
+        self.assertTrue(torch.allclose(full_mat_vec.T,mat_vec)) # add assertion here
+
