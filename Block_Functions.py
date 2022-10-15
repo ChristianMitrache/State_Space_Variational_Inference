@@ -74,10 +74,3 @@ def Block_Mat_Vec(D, B, x):
     return mat_vec_multiply_D(x) + \
            torch.cat((torch.zeros((x.shape[0],1,x.shape[2])),mat_vec_multiply_B(x[:,1:,:])),dim =1)
 
-
-    #D = torch.unsqueeze(D,0)
-    #B = torch.unsqueeze(B,0)
-    #x = torch.unsqueeze(x,3)
-    #return torch.sum(D*x,dim = 3) + \
-    #       torch.cat((torch.zeros((x.shape[0],1,x.shape[2])),torch.sum(B*x[:,1:,:,:],dim = 3)),dim = 1)
-
