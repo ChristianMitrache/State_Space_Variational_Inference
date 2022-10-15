@@ -27,23 +27,6 @@ class Fully_Connected_Model(nn.Module):
 
     def forward(self, x):
         return self.linear_layers(x)
-"""
-For now Don't worry about this
-class Fully_Connected_PD_Model(Fully_Connected_Model):
-"""
-    #This Model Implements a model from A -> A' where A,A' are positive Definite Matrices.
-    #To enforce this constraint the linear layers are multiplied with each other.
-
-"""
-    def __init__(self,xt_dim,linear_layer_dims,non_lin_module):
-        super().__init__(xt_dim,linear_layer_dims,non_lin_module)
-
-    def forward(self, x):
-        for i in range(len(self.linear_layers)):
-            x = self.linear_layers[i](x)
-            x = x@ x.T + torch.eye(x.shape[0])*(1E-15) # Enforcing postive definite constraint for each layer
-        return x
-"""
 
 class Fully_Connected_Mean_Model(Fully_Connected_Model):
     '''
