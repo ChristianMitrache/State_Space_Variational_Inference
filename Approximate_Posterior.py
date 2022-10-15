@@ -1,7 +1,7 @@
 # Abstract Class format taken directly from:  https://github.com/earcher/vilds/blob/master/code/RecognitionModel.py
 # with significant changes made.
 import math
-from Block_Functions import Block_Mat_Vec
+from Block_Functions import Block_Inverse_Solve
 import torch
 from torch import nn
 
@@ -50,7 +50,7 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         :return: Returns n x T x x_dim tensor of normal samples
         """
         epsilon = torch.normal(mean= 0, std= 1,size=(n, x.shape[0], x.shape[1]),requires_grad= False)
-        noise_cov_term = Block_Mat_Vec(self.D, self.B, epsilon)
+        noise_cov_term = Block_Inverse_Solve(self.D, self.B, epsilon)
         mean = self.mean_model(x)
         return torch.unsqueeze(mean,dim = 0) + noise_cov_term
 
