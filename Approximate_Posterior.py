@@ -63,3 +63,17 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         self.D,self.B = self.inv_cov_model(x)
         return (x.shape[0]*x.shape[1]/2)*(1 + torch.log(2*torch.tensor(math.pi))) - \
                torch.sum(torch.log(torch.diagonal(self.D,dim1 = 1,dim2=2)),dim=1)
+
+    def get_mean_parameters(self):
+        """
+        This function returns the mean parameters used by the mean NN.
+        :return: returns parameters from torch.parameters call
+        """
+        return self.mean_model.parameters(recurse = True)
+
+    def get_variance_parameters(self):
+        """
+        This function returns the variance parameters used by the variance NN.
+        :return: returns parameters from torch.parameters call
+        """
+        return self.inv_cov_model.parameters(recurse = True)
