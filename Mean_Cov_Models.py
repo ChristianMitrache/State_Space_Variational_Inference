@@ -18,11 +18,11 @@ class Fully_Connected_Model(nn.Module):
         for i in range(len(linear_layer_dims)-1):
             self.linear_layers.append(nn.Linear(linear_layer_dims[i],linear_layer_dims[i+1],bias=False))
             self.linear_layers.append(non_lin_module)
-            #self.linear_layers.append(nn.BatchNorm1d(linear_layer_dims[i+1]))
+            #self.linear_layers.append(nn.BatchNorm1d(linear_layer_dims[i+1])) <- not sure if this is desired
         # appending last layer which maps back to xt_dim
         self.linear_layers.append(nn.Linear(linear_layer_dims[-1],xt_dim,bias= False))
         self.linear_layers.append(non_lin_module)
-        #self.linear_layers.append(nn.BatchNorm1d(xt_dim))
+        #self.linear_layers.append(nn.BatchNorm1d(xt_dim)) <- not sure if this is desired
 
 
     def forward(self, x):
