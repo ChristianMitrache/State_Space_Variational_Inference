@@ -12,35 +12,47 @@ def Compute_Block_Cholesky(D, B):
     :param B: (T-1)xnxn tensor representing B nxn lower diagonal blocks of covariance matrix.
     :return: (diag,off_diag) where dim(diag): Txnxn and dim(off_diag): (T-1)xnxn
     """
-    diag_chol_blocks = []
-    off_diag_chol_blocks = []
+    diag_chol_blocks = torch.zeros(D.shape)
+    off_diag_chol_blocks = torch.zeros(B.shape)
     # Initial computation for
     A = D[0, :, :]  # Compute left-upper block (the very first one)
     for i in range(0, D.shape[0] - 1):
         L_A = torch.linalg.cholesky_ex(A)[0]
-        diag_chol_blocks.append(L_A)
+        diag_chol_blocks[i,:,:] = L_A
         B_i = B[i, :, :]
         bottom_left = torch.linalg.solve_triangular(L_A.T, B_i, left=False, upper=True)
-        off_diag_chol_blocks.append(bottom_left)
+        off_diag_chol_blocks[i,:,:] = bottom_left
         A = D[i + 1, :, :] - bottom_left @ bottom_left.T  # Compute left-lower block of cholesky block
-    diag_chol_blocks.append(torch.linalg.cholesky_ex(A)[0])  # appending last diagonal chol block
-    diag_chol_blocks = torch.stack(diag_chol_blocks, dim=0)
-    off_diag_chol_blocks = torch.stack(off_diag_chol_blocks, dim=0)
+
+    diag_chol_blocks[D.shape[0],:,:]  = torch.linalg.cholesky_ex(A)[0]  # appending last diagonal chol block
+
+    #diag_chol_blocks = torch.stack(diag_chol_blocks, dim=0)
+    #off_diag_chol_blocks = torch.stack(off_diag_chol_blocks, dim=0)
 
     return (diag_chol_blocks, off_diag_chol_blocks)
-
 
 def Block_Inverse_Solve(D, B, x):
     """
     Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, solve for L^{-1}x where L is cholesky
-    decomposition
+    decomposition lower triangle
     :param D: cholesky diagonal blocks tensor with shape Txnxn
     :param B: cholesky off-diagonal blocks with shape (T-1)xnxn
     :param x: tensor with shape mxTxn where m is the batch dimension.
     :return: mxTxn tensor which solves the m is batch dimension.
     """
+    return_vec = torch.zeros((x.shape[0],x.shape[1],x.shape[2]))
+    x = torch.unsqueeze(x,dim = 2)
+    # Initial solution (without block B_i)
+    x_i = x[:,0,:,:]
+    solve_i = torch.linalg.solve_triangular(D[0,:,:],x_i,upper = False,left = False)
+    return_vec[:,0,:] = solve_i
+    # Iterating through rest of blocks with B_i, D_i present in linear system
+    for i in range(1,D.shape[0]):
+        x_i = x[:, i, :, :]
+        solve_i = torch.linalg.solve_triangular(D[i,:,:],x_i-solve_i @ B[i-1,:,:],upper = False,left = False)
+        return_vec[:,i,:] = solve_i
+    return return_vec
 
-    # TODO
 
 
 def Block_Mat_Vec(D, B, x):
