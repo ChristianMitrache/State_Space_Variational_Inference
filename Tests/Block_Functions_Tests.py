@@ -137,16 +137,18 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
     """
 
     def test_Block_Triangular_Solve_small(self):
-        # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
+        """
+        tests the block triangular solve and compares it to fully dense inverse solve implement in torch.
+        """
         xt_dim = 3
         time = 4
         batch = 2
         L = torch.rand((time,xt_dim,xt_dim))
         D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))+5
         B = torch.rand((time-1,xt_dim,xt_dim))
+
         # Need to construct cholesky decomposition to get diagonal matrix that is lower-triangular
         D,B = Compute_Block_Cholesky(D,B)
-
         full_vec = torch.rand((batch, time, xt_dim))
         # Computing block inverse
         Block_Solve = Block_Triangular_Solve(D, B, full_vec)
@@ -154,9 +156,25 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
         full_mat = reshape_helper_D(D, B,lower = True)
         full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
         # Computing Inverse with torch
-        torch_inverse_solve = torch.linalg.solve(torch.repeat_interleave(torch.unsqueeze(full_mat,0),repeats = batch,dim =0), full_vec_squeeze)
-        #torch_inverse_solve_2 = torch.linalg.solve(full_mat.T, full_vec_squeeze.T).T
-        #print(torch.isclose(torch_inverse_solve_2,torch_inverse_solve))
-        #reshaping block solve to compare with torch's solved vector
+        torch_inverse_solve = torch.linalg.solve(torch.repeat_interleave(torch.unsqueeze(full_mat,0)
+                                                                         ,repeats = batch,dim =0), full_vec_squeeze)
         block_solve_reshaped = torch.reshape(Block_Solve,(batch,xt_dim*time))
-        self.assertTrue(torch.allclose(torch_inverse_solve,block_solve_reshaped)) # add assertion here
+        self.assertTrue(torch.allclose(torch_inverse_solve,block_solve_reshaped))
+
+    def test_Block_Triangular_Solve_dimensions(self):
+        """
+        tests the block triangular solve and compares it to fully dense inverse solve implement in torch.
+        """
+        xt_dim = 3
+        time = 4
+        batch = 2
+        L = torch.rand((time, xt_dim, xt_dim))
+        D = torch.exp(L @ torch.transpose(L, dim0=1, dim1=2)) + 5
+        B = torch.rand((time - 1, xt_dim, xt_dim))
+
+        # Need to construct cholesky decomposition to get diagonal matrix that is lower-triangular
+        D, B = Compute_Block_Cholesky(D, B)
+        full_vec = torch.rand((batch, time, xt_dim))
+        # Computing block inverse
+        Block_Solve = Block_Triangular_Solve(D, B, full_vec)
+        self.assertTrue(tuple(Block_Solve.shape) ==(batch,time,xt_dim))

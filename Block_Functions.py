@@ -41,14 +41,10 @@ def Block_Triangular_Solve(D, B, x):
     :return: mxTxn tensor which solves the m is batch dimension.
     """
     return_vec = torch.zeros((x.shape[0],x.shape[1],x.shape[2]))
-    #x = torch.unsqueeze(x,dim = 2)
     # Initial solution (without block B_i)
     x_i = x[:,0,:]
     solve_i = torch.linalg.solve_triangular(D[0,:,:],x_i.T,upper = False).T
-    print(solve_i)
-    #solve_i_test = torch.linalg.solve(D[0, :, :].T, x_i.T).T
-    #print(torch.isclose(solve_i_test,solve_i))
-    #print(solve_i.shape)
+
     return_vec[:,0,:] = solve_i
     # Iterating through rest of blocks with B_i, D_i present in linear system
     for i in range(1,D.shape[0]):

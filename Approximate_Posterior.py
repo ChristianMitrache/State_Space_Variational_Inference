@@ -1,7 +1,7 @@
 # Abstract Class format taken directly from:  https://github.com/earcher/vilds/blob/master/code/RecognitionModel.py
 # with significant changes made.
 import math
-from Block_Functions import Block_Inverse_Solve
+from Block_Functions import Block_Triangular_Solve
 import torch
 from torch import nn
 
@@ -34,7 +34,16 @@ class Recognition_Model(nn.Module):
 
 class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
     """
-    This class of models takes in the log-likelihood and returns a differentiable estimate of L(theta,phi; X)
+    This class implements the time series approximate Gaussian parameterization for variational inference.
+
+    This class stores class variables:
+    :param mean_model: model for parameterizing the mean of gaussian at time t.
+    :param inv_cov_model: model that produces lower triangular matrix of cholesky decomposition of the inverse variance.
+           (It is required that it returns this in the form of B,D)
+
+    AFTER CALLING FORWARD PASS TO COMPUTE ENTROPY:
+    :param L_D: diagonal blocks of the cholesky decomposition of the inverse covariance matrix
+    :param L_B off-diagonal blocks of the cholesky decomposition of the inverse covariance matrix
     """
     def __init__(self,mean_model,inv_cov_model):
         super().__init__()
@@ -50,7 +59,7 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         :return: Returns n x T x x_dim tensor of normal samples
         """
         epsilon = torch.normal(mean= 0, std= 1,size=(n, x.shape[0], x.shape[1]),requires_grad= False)
-        noise_cov_term = Block_Inverse_Solve(self.D, self.B, epsilon)
+        noise_cov_term = Block_Triangular_Solve(self.L_D, self.L_B, epsilon)
         mean = self.mean_model(x)
         return torch.unsqueeze(mean,dim = 0) + noise_cov_term
 
@@ -60,9 +69,9 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         :param x: observations from time series (Should be a T x dim_x vector)
         :return:  entropy value of the normal distributions centered at each data-point in time series.
         """
-        self.D,self.B = self.inv_cov_model(x)
+        self.L_D,self.L_B = self.inv_cov_model(x)
         return (x.shape[0]*x.shape[1]/2)*(1 + torch.log(2*torch.tensor(math.pi))) - \
-               torch.sum(torch.log(torch.diagonal(self.D,dim1 = 1,dim2=2)),dim=1)
+               torch.sum(torch.log(torch.diagonal(self.L_D,dim1 = 1,dim2=2)),dim=1)
 
     def get_mean_parameters(self):
         """
