@@ -2,20 +2,20 @@ import unittest
 from timeit import timeit
 from Mean_Cov_Models import Inverse_Variance_Model
 import torch
-from Block_Functions import Compute_Block_Cholesky,Block_Mat_Vec,Block_Triangular_Solve
+from Block_Functions import Compute_Block_Cholesky,Block_Mat_Vec_Cholesky,Block_Triangular_Solve
 
 
-def reshape_helper_D(D,B,lower = False):
+def reshape_helper_D(L_D, L_B, lower = True):
     """
     helper function that reshapes tensor of block matrices to bigger matrix. This is for comparing my computed values
-    against torch.
-    :param D: Diagonal Block Tensor: Txnxn
-    :param B: Below Diagonal Block Tensor (T-1)xnxn
+    against torch. REMEMBER: D,B ARE CHOLESKY DECOMPOSITION COMPONENTS.
+    :param L_D: DIAGONAL Block Tensor: Txnxn
+    :param L_B: Below Diagonal Block Tensor (T-1)xnxn
     :return: (nT)x(nT) matrix containing diagonal and off diagonal blocks (which will also be symmetric)
     """
-    xt_dim = D.shape[1]
-    D_block_diag = torch.block_diag(*torch.split(D.reshape(D.shape[0] * D.shape[1], D.shape[2]), D.shape[1]))
-    B_block_diag = torch.block_diag(*torch.split(B.reshape(B.shape[0] * B.shape[1], B.shape[2]), B.shape[1]))
+    xt_dim = L_D.shape[1]
+    D_block_diag = torch.block_diag(*torch.split(L_D.reshape(L_D.shape[0] * L_D.shape[1], L_D.shape[2]), L_D.shape[1]))
+    B_block_diag = torch.block_diag(*torch.split(L_B.reshape(L_B.shape[0] * L_B.shape[1], L_B.shape[2]), L_B.shape[1]))
     padding_func = torch.nn.ConstantPad2d((0,xt_dim, xt_dim, 0), 0)
     B_block_full = padding_func(B_block_diag)
     #B_block_full = torch.concat((torch.zeros(B_block_diag.shape[0] + xt_dim, xt_dim),
@@ -65,8 +65,6 @@ class Test_Block_Cholesky(unittest.TestCase):
         L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)+5
         D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
         B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)+5
-        # Constructing matrix to feed into torch from this:
-        #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
         chol_tuple = Compute_Block_Cholesky(D, B)
         A = reshape_helper_D(D, B,lower = False)
@@ -92,37 +90,39 @@ class Test_Block_Cholesky(unittest.TestCase):
 
 #############################################################################################################
 
-class Test_Block_Mat_Vec(unittest.TestCase):
+class Test_Block_Mat_Vec_Cholesky(unittest.TestCase):
     """
     Testing the block matrix vector multiplication with values given by torch.
     """
-    def test_block_Mat_Vec_small(self):
-        xt_dim = 2
-        time = 3
-        batch = 2
-        L = torch.rand((time,xt_dim,xt_dim))
-        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))+5
+    def test_block_Mat_Vec_Cholesky_small(self):
+        # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
+        xt_dim = 5
+        time = 10
+        batch = 1
+        L = torch.rand((time,xt_dim,xt_dim))+5
+        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
         #B = torch.zeros(((time-1,xt_dim,xt_dim)))
         B = torch.rand((time-1,xt_dim,xt_dim))+5
         full_vec = torch.rand((batch, time, xt_dim))
-        mat_vec = Block_Mat_Vec(D, B, full_vec)
+        mat_vec = Block_Mat_Vec_Cholesky(D, B, full_vec)
         full_mat = reshape_helper_D(D, B,lower = False)
         full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
         full_mat_vec = full_mat@full_vec_squeeze.T
         mat_vec = torch.reshape(mat_vec,(batch,xt_dim*time))
         self.assertTrue(torch.allclose(full_mat_vec.T,mat_vec)) # add assertion here
 
-    def test_block_Mat_Vec_big(self):
+
+    def test_block_Mat_Vec_Cholesky_big(self):
         # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
         xt_dim = 100
-        time = 1000
-        batch = 100
+        time = 100
+        batch = 30
         L = torch.rand((time,xt_dim,xt_dim))+5
         D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
         #B = torch.zeros(((time-1,xt_dim,xt_dim)))
         B = torch.rand((time-1,xt_dim,xt_dim))+5
         full_vec = torch.rand((batch, time, xt_dim))
-        mat_vec = Block_Mat_Vec(D, B, full_vec)
+        mat_vec = Block_Mat_Vec_Cholesky(D, B, full_vec)
         full_mat = reshape_helper_D(D, B,lower = False)
         full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
         full_mat_vec = full_mat@full_vec_squeeze.T

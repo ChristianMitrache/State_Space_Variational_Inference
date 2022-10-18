@@ -53,34 +53,34 @@ def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> to
         return_vec[:,i,:] = solve_i
     return return_vec
 
-def Block_Mat_Vec(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor)-> torch.Tensor:
+def Block_Mat_Vec_Cholesky(L_D:torch.Tensor, L_B:torch.Tensor, x:torch.Tensor)-> torch.Tensor:
     """
-    Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, compute matrix vector product in batches
-    :param D: cholesky diagonal blocks tensor with shape Txnxn
-    :param B: cholesky off-diagonal blocks with shape (T-1)xnxn
+    Given cholesky diagonal blocks L_D, cholesky off-diagonal blocks L_B, compute matrix vector product in batches
+    :param L_D: cholesky diagonal blocks tensor with shape Txnxn
+    :param L_B: cholesky off-diagonal blocks with shape (T-1)xnxn
     :param x: tensor with shape mxTxn where m is the batch dimension.
     :return: mxTxn tensor (m is batch dimension).
     """
     batched_mat_vec_mul = vmap(torch.mv)
 
-    def batched_fix_D(x: torch.Tensor):
+    def batched_fix_L_D(x: torch.Tensor):
         """
         fixes matrix D so I can batch over x now.
         :param x: tensor that is Txn
         :return: returns batched matrix vector product of Dx
         """
-        return batched_mat_vec_mul(D,x)
+        return batched_mat_vec_mul(L_D, x)
 
-    def batched_fix_B(x:torch.Tensor):
+    def batched_fix_L_B(x:torch.Tensor):
         """
         fixes matrix B so I can batch over x now.
         :param x: tensor that is (T-1)xn
         :return: returns batched matrix vector product of Bx
         """
-        return batched_mat_vec_mul(B,x)
+        return batched_mat_vec_mul(L_B, x)
 
-    mat_vec_multiply_D = vmap(batched_fix_D)
-    mat_vec_multiply_B = vmap(batched_fix_B)
-    return mat_vec_multiply_D(x) + \
-           torch.cat((torch.zeros((x.shape[0],1,x.shape[2])),mat_vec_multiply_B(x[:,1:,:])),dim =1)
 
+    mat_vec_multiply_D = vmap(batched_fix_L_D)
+    mat_vec_multiply_B = vmap(batched_fix_L_B)
+    B_lower_sum = torch.cat((torch.zeros((x.shape[0], 1, x.shape[2])), mat_vec_multiply_B(x[:, 1:, :])), dim=1)
+    return mat_vec_multiply_D(x) + B_lower_sum
