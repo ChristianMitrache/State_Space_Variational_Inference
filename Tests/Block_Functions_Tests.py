@@ -1,5 +1,5 @@
 import unittest
-
+from timeit import timeit
 from Mean_Cov_Models import Inverse_Variance_Model
 import torch
 from Block_Functions import Compute_Block_Cholesky,Block_Mat_Vec,Block_Triangular_Solve
