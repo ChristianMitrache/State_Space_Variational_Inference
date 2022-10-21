@@ -4,6 +4,36 @@ import torch
 from torch import nn
 from torch.distributions import Poisson, MultivariateNormal
 
+def sample_from_Poisson_LDS(epsilon_precision: torch.Tensor, LDS_matrix: torch.Tensor,
+                            loading_matrix: torch.Tensor, loading_bias: torch.Tensor, time_steps: int):
+    """
+    Function that produces sequence of observations x from sampling from a poisson LDS given the true parameters.
+    In the notation of https://arxiv.org/pdf/1511.07367.pdf
+    :param epsilon_precision: Q^-1
+    :param LDS_matrix: A
+    :param loading_matrix: C NOTE: C must be z_t x x_t matrix
+    :param loading_bias: d
+    :param time_steps: number of time steps
+    :return: tensor of samples in shape: Tx x_dim
+
+    Note: Batching for this function is not implemented.
+    """
+    # sampling from epsilon process.
+    sampled_epsilon = MultivariateNormal(loc=torch.zeros(time_steps,epsilon_precision.shape[0]),
+                                         precision_matrix=epsilon_precision).sample((time_steps,epsilon_precision.shape[0]))
+
+    #initial sample assuming that z_0 = epsilon_0
+    sample_tensor = torch.zeros((time_steps,loading_matrix.shape[0]))
+    z_curr = sampled_epsilon[0,:]
+    sample_tensor[0,:] = Poisson(rate = torch.exp(loading_matrix@z_curr+loading_bias))
+
+    # Iterative sampling assuming z_t = Az_{t-1} + epsilon_t
+    for i in range(1,time_steps):
+        z_curr =  LDS_matrix@z_curr + sampled_epsilon[i,:]
+        sample_tensor[i,:] = Poisson(rate = torch.exp(loading_matrix@z_curr+loading_bias))
+    return sample_tensor
+
+
 class Poisson_LDS_Expected_Likelihood(nn.Module):
     """
     Class that initializes Poisson LDS likelihood
