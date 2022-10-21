@@ -51,7 +51,7 @@ class Poisson_LDS_Expected_Likelihood(nn.Module):
         """
         super().__init__()
 
-        # Code Below checks each parameter and initializes it if it hasn't been passed in by the user
+        # Code Below checks each parameter and initializes randomly it if it hasn't been passed in by the user
         self.xt_dim = xt_dim
         self.zt_dim = zt_dim
         # epsilon covariance:
@@ -79,7 +79,7 @@ class Poisson_LDS_Expected_Likelihood(nn.Module):
     def forward(self,x:torch.Tensor,z:torch.Tensor):
         """
         This method must be
-        :param x: a tensor of size batch_size x Tx dim_x vector corresponding to the observations of the time series
+        :param x: a tensor of size dim_x vector corresponding to the observations of the time series
         :param z: a tensor of size batch_size T x dim_z corresponding to a sample drawn from the approximate posterior.
         :return: Expected Log Joint Likelihood: P_{\theta}(x,z) (averaged over the batches)
         """

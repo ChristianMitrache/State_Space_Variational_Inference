@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from typing import Dict
 
-# NOT SURE IF I AM GONNA KEEP THIS CLASS - KINDA SEEMS LIKE A WASTE OF TIME.
+# NOT SURE IF I AM GONNA KEEP THIS CLASS - KINDA SEEMS LIKE A WASTE OF TIME. Maybe would be useful for asserting types?
 
 @torch.jit.script
 class Expected_Joint_Likelihood(nn.Module):
@@ -10,6 +10,8 @@ class Expected_Joint_Likelihood(nn.Module):
     Astract class that must be implemented by the user when specifying a model for the data.
     This classes only function is to remind the user what needs to be implemented in the forward pass and
     to force the user to register the model parameters.
+
+
     """
     def __init__(self, named_model_parameters: Dict[str,torch.Tensor(float)]):
         """
@@ -20,7 +22,7 @@ class Expected_Joint_Likelihood(nn.Module):
         super().__init__()
         self.params = nn.ParameterDict(named_model_parameters)
 
-    def forward(self,x,z) -> torch.Tensor:
+    def forward(self,x:torch.tensor, z:torch.tensor) -> torch.Tensor:
         """
         This method must be
         :param x: a Tx dim_x vector corresponding to the observations of the time series

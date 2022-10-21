@@ -5,8 +5,6 @@ from Block_Functions import Compute_Block_Cholesky
 class Fully_Connected_Model(nn.Module):
     '''
     This module implements simple dense network with linear layer dimensions and non-linearity of user's choice.
-
-    Note: For forward pass, input should be of size T X N (batch x dimension)
     '''
     def __init__(self,xt_dim,zt_dim,linear_layer_dims,non_lin_module):
         super().__init__()
@@ -26,6 +24,11 @@ class Fully_Connected_Model(nn.Module):
 
 
     def forward(self, x):
+        """
+        Returns
+        :param x: tensor of size T x x_dim
+        :return: tensor of size T x z_dim
+        """
         return self.linear_layers(x)
 
 class Fully_Connected_Mean_Model(Fully_Connected_Model):
@@ -47,7 +50,6 @@ class Inverse_Variance_Model(nn.Module):
     def __init__(self,xt_dim,zt_dim,linear_layer_dims_B,linear_layer_dims_D,non_lin_module):
         """
         This function iniatilizes Inverse Variance model.
-        :param xt_dim: dimension of x_t
         :param zt_dim: dimension of z_t
         :param linear_layer_dims_B: dimensions of linear layers for network producing the B_t:
         NOTE: the values passed here should be gradually changing from x_t_dim --> zt_dim**2
@@ -68,7 +70,7 @@ class Inverse_Variance_Model(nn.Module):
         Computes forward pass and returns diagonal blocks of block cholesky decomp.
         x should be a Txn tensor.
 
-        NOTE: THIS FUNCTION DOES NOT FUNCTION FOR BATCHED TIME SERIES
+        NOTE: THIS FUNCTION MIGHT NOT WORK FOR BATCHED TIME SERIES.
 
         returns a tuple of ((Tx n x n), (T-1 x n x n)) matrices representing the block matrices for the lower diagonal
         matrix of the inverse covariance.

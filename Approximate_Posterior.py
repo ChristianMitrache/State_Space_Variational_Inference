@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 
-class Recognition_Model(nn.Module):
+class Approximate_Model(nn.Module):
     '''
     Recognition Model Interace Class
     Recognition model approximates the posterior given some observations
@@ -25,14 +25,14 @@ class Recognition_Model(nn.Module):
         '''
         raise Exception("Please implement me. This is an abstract method.")
 
-    def Sample(self,n,x):
+    def Sample(self, n, x):
         '''
         Returns tensor of samples of size n x dim_z
         '''
         raise Exception("Please implement me. This is an abstract method.")
 
 
-class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
+class Time_Series_Approx_Gaussian_First_Param(Approximate_Model):
     """
     This class implements the time series approximate Gaussian parameterization for variational inference.
 
@@ -50,7 +50,7 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         self.mean_model = mean_model
         self.inv_cov_model = inv_cov_model
 
-    def Sample(self,n,x):
+    def Sample(self, n, x):
         """
         Returns batched samples from time series model given observational vector x.
         Note: DO NOT CALL THIS METHOD BEFORE forward for this function.
@@ -58,16 +58,16 @@ class Time_Series_Approx_Gaussian_First_Param(Recognition_Model):
         :param x: observational time series x
         :return: Returns n x T x x_dim tensor of normal samples
         """
-        epsilon = torch.normal(mean= 0, std= 1,size=(n, x.shape[0], x.shape[1]),requires_grad= False)
-        noise_cov_term = Block_Triangular_Solve(self.L_D, self.L_B, epsilon)
         mean = self.mean_model(x)
+        epsilon = torch.normal(mean= 0, std= 1,size=(n, mean.shape[0], mean.shape[1]),requires_grad= False)
+        noise_cov_term = Block_Triangular_Solve(self.L_D, self.L_B, epsilon)
         return torch.unsqueeze(mean,dim = 0) + noise_cov_term
 
     def forward(self,x):
         """
         Implementing forward pass required by nn module.
-        :param x: observations from time series (Should be a T x dim_x vector)
-        :return:  entropy value of the normal distributions centered at each data-point in time series.
+        :param x: observations from time series (Should be a time x dim_x vector)
+        :return:  entropy value of the normal distributions centered at each data-point in full time series.
         """
         self.L_D,self.L_B = self.inv_cov_model(x)
         return (x.shape[0]*x.shape[1]/2)*(1 + torch.log(2*torch.tensor(math.pi))) - \
