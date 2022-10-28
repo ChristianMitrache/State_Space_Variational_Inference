@@ -76,14 +76,20 @@ class Poisson_LDS_Expected_Likelihood(nn.Module):
         if loading_bias is None:
             self.loading_transformation.bias = nn.Parameter(torch.rand(xt_dim))
 
-    def forward(self,x:torch.Tensor,z:torch.Tensor):
+    def forward(self,x:torch.Tensor,z:torch.Tensor,batched =True):
         """
         This method must be
         :param x: a tensor of size dim_x vector corresponding to the observations of the time series
         :param z: a tensor of size batch_size T x dim_z corresponding to a sample drawn from the approximate posterior.
         :return: Expected Log Joint Likelihood: P_{\theta}(x,z) (averaged over the batches)
         """
-        return torch.mean(MultivariateNormal(loc = torch.zeros(z.shape[2]),precision_matrix=self.epsilon_precision).log_prob(z[:,0,:]) + \
-        torch.sum(MultivariateNormal(loc = self.LDS_transformation(z[:,:-1,:]),
-                                     precision_matrix= self.epsilon_precision).log_prob(z[:,1:,:]),dim = 1) + \
-        torch.sum(Poisson(rate = torch.exp(self.loading_transformation(z))).log_prob(x),dim=(1,2)))
+        if batched:
+            return torch.mean(
+                torch.sum(MultivariateNormal(loc=self.LDS_transformation(z[:, :-1, :]),
+                                             precision_matrix=self.epsilon_precision).log_prob(z[:, 1:, :]), dim=1) + \
+                torch.sum(Poisson(rate=torch.exp(self.loading_transformation(z[:,1:,:]))).log_prob(x[1:,:]), dim=(1, 2)))
+        else:
+            return torch.mean(MultivariateNormal(loc = torch.zeros(z.shape[2]),precision_matrix=self.epsilon_precision).log_prob(z[:,0,:]) + \
+            torch.sum(MultivariateNormal(loc = self.LDS_transformation(z[:,:-1,:]),
+                                         precision_matrix= self.epsilon_precision).log_prob(z[:,1:,:]),dim = 1) + \
+            torch.sum(Poisson(rate = torch.exp(self.loading_transformation(z))).log_prob(x),dim=(1,2)))

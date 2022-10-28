@@ -50,16 +50,21 @@ class Time_Series_Approx_Gaussian_First_Param(Approximate_Model):
         self.mean_model = mean_model
         self.inv_cov_model = inv_cov_model
 
-    def Sample(self, n, x):
+    def Sample(self, n, x,standard_sample = True):
         """
         Returns batched samples from time series model given observational vector x.
         Note: DO NOT CALL THIS METHOD BEFORE forward for this function.
         :param n: number of batches.
         :param x: observational time series x
-        :return: Returns n x T x x_dim tensor of normal samples
+        :return: Returns n x T x x_dim tensor of normal samples if standard sample is true
+                 Returns n x (T-1) x x_dim tensor if standard sample is not true
         """
         mean = self.mean_model(x)
         epsilon = torch.normal(mean= 0, std= 1,size=(n, mean.shape[0], mean.shape[1]),requires_grad= False)
+        # if not standard sample, replace the first time sample with the NN's mean prediction and sample from their.
+        if not standard_sample:
+            epsilon[:,0,:] = torch.repeat_interleave(mean[0,:].unsqueeze(dim =0),n,dim=0)
+        # if it is standard sample, then keep first normal sample from N(0,1).
         noise_cov_term = Block_Triangular_Solve(self.L_D, self.L_B, epsilon)
         return torch.unsqueeze(mean,dim = 0) + noise_cov_term
 
