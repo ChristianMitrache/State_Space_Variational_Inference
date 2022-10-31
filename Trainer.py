@@ -3,6 +3,7 @@ from torch.nn import Module
 from Approximate_Posterior import Approximate_Model
 from torch.utils.data import Dataset,BatchSampler,SequentialSampler,TensorDataset,DataLoader
 import math
+import lightning
 
 """
 This file contains classes for loss functions, data set loaders and the training function.
@@ -46,18 +47,18 @@ def Create_Time_Series_Data_Loader(X:torch.Tensor,batch_size:int,num_workers = 0
     return DataLoader(Tensor_data,batch_sampler=batched_time_sampler,num_workers = num_workers,
                       persistent_workers = persistent_workers, pin_memory = pin_memory)
 
-def train_model_epoch(loader,model,optimizer,loss_fn,scheduler,
+
+def train_model_epoch(loader,loss_fn,optimizer,scheduler,
                       device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
-  """Train model for one epoch"""
-  for batch_index, (data, targets) in enumerate(loader):
-      # Moving Data to GPU
+  """Train model for one epoch and return loss"""
+
+  for batch_index, (data) in enumerate(loader):
+      # Moving Data to GPU (and converting ints to floating points for training)
       data = data.float().to(device = device)
-      targets = torch.tensor(targets, dtype = torch.long,device=device)
 
       # Forward pass:
       optimizer.zero_grad()
-      scores = model(data)
-      loss = loss_fn(scores, targets)
+      loss = loss_fn(data)
 
       # zero out gradients and perform backward pass.
       loss.backward()
@@ -70,4 +71,3 @@ def train_model_epoch(loader,model,optimizer,loss_fn,scheduler,
        # print(loss.item())
   scheduler.step()
   return loss
-
