@@ -21,7 +21,6 @@ if __name__ == "__main__":
     true_d = torch.rand(xt_dim)
     # sampling from true Poisson LDS model.
     observed_time_series = Poisson_LDS.sample_from_Poisson_LDS(torch.inverse(true_Q),true_A,true_C,true_d,time)
-    print(observed_time_series.shape) # checking shape
 
     # instantiating random initialization of a poisson LDS model to be trained
     PLDS_model = Poisson_LDS_Expected_Likelihood(xt_dim, zt_dim)
@@ -39,6 +38,7 @@ if __name__ == "__main__":
     # hyper-parameters for training:
     batch_size = 10
     num_epochs = 100
+    num_samples = 100
     lr = 1e-4
 
     # Setting Device (GPU/CPU)
@@ -62,7 +62,8 @@ if __name__ == "__main__":
         print("Epoch:")
         print(i)
         print("batch loss at end of epoch:")
-        last_batch_loss = Trainer.train_model_epoch(time_series_loader, KL_Divergence, optimizer, scheduler).item()
+        last_batch_loss = Trainer.train_model_epoch(time_series_loader, KL_Divergence, optimizer, scheduler,
+                                                    num_samples=num_samples).item()
         print(last_batch_loss)
         training_losses.append(last_batch_loss)
 

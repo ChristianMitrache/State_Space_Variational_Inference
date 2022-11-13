@@ -16,11 +16,3 @@ class Test_Variance_Model(unittest.TestCase):
         L_D, L_B = inverse_variance_model(x)
         self.assertTrue(tuple(L_B.shape) ==(time-1,zt_dim,zt_dim) and tuple(L_D.shape) == (time,zt_dim,zt_dim))
 
-
-if __name__ == '__main__':
-    unittest.main()
-
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -21,11 +21,11 @@ class Approximate_Inference_Loss(Module):
         Makes calls to approximate model class and estimates the KL divergence between the user model and
         and the approximate model.
         :param n: number of samples to take when estimating expectation
-        :param x: observations of the time series (a tensor of shape batch_time x x_dim )
+        :param x: observations of the time series (a tensor of shape batch_time x x_dim)
         :return: returns the KL divergence between approximate and user model.
         """
-        samples = self.Approx_Post.Sample(n, x)  # Batch x time x x_dim
-        return self.Approx_Post(x) + self.User_model(x,samples)
+        # Note: Sampling needs to be called after forward pass of approximate posterior!
+        return self.Approx_Post(x) + self.User_model(x,self.Approx_Post.Sample(n, x))
 
 
 # Dataloader for getting subsets of original time series
@@ -49,16 +49,16 @@ def Create_Time_Series_Data_Loader(X:torch.Tensor,batch_size:int,num_workers = 0
 
 
 def train_model_epoch(loader,loss_fn,optimizer,scheduler,
-                      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+                      num_samples = 100,device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
   """Train model for one epoch and return loss"""
 
-  for batch_index, (data) in enumerate(loader):
+  for batch_index, data in enumerate(loader):
       # Moving Data to GPU (and converting ints to floating points for training)
-      data = data.float().to(device = device)
+      data = data[0].float().to(device = device)
 
       # Forward pass:
       optimizer.zero_grad()
-      loss = loss_fn(data)
+      loss = loss_fn(data, num_samples)
 
       # zero out gradients and perform backward pass.
       loss.backward()
@@ -69,5 +69,6 @@ def train_model_epoch(loader,loss_fn,optimizer,scheduler,
        # print(batch_index+1)
        # print("model_loss for batch")
        # print(loss.item())
-  scheduler.step()
+
+  scheduler.step() # change learning rate after epoch with scheduler
   return loss

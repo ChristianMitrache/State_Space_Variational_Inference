@@ -12,7 +12,3 @@ class Poisson_LDS_Tests(unittest.TestCase):
         x = torch.randint(low = 0, high= 100,size =(time,xt_dim))
         z = torch.rand((batch,time,zt_dim))
         print(model(x,z))
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -38,6 +38,3 @@ class Test_Time_Series_Approx_Gaussian_First_Param(unittest.TestCase):
         approx_inference_object = Time_Series_Approx_Gaussian_First_Param(mean_model, inverse_variance_model)
         approx_inference_object(x)
         self.assertTrue(tuple(approx_inference_object.Sample(batch, x).shape) == (batch, time, zt_dim))
-
-if __name__ == '__main__':
-    unittest.main()
