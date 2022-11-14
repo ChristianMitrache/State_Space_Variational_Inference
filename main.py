@@ -57,7 +57,7 @@ if __name__ == "__main__":
     time_series_loader = Trainer.Create_Time_Series_Data_Loader(observed_time_series, batch_size)
     KL_Divergence.to(device)
     # optimizer = optim.SGD(model.parameters(),lr = lr_sgd,momentum = 0.85)
-    optimizer = optim.Adam(KL_Divergence.parameters(), lr=lr)
+    optimizer = optim.Adam(KL_Divergence.parameters(), lr=lr,eps =1e-6)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
 
     # Training Loop:

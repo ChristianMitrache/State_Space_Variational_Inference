@@ -47,9 +47,9 @@ class Test_Block_Cholesky(unittest.TestCase):
     def test_block_cholesky_non_diagonal_2(self):
         xt_dim = 5
         time = 1000
-        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)+5
+        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)+2
         D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
-        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)+5
+        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)+2
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
