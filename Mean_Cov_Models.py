@@ -10,16 +10,17 @@ class Fully_Connected_Model(nn.Module):
         super().__init__()
         # creating sequential module which will be called later:
         # Note: Batch norms are not included might be interesting to experiment with this later
-        self.linear_layers= nn.Sequential(nn.Linear(xt_dim,linear_layer_dims[0],bias= False),
+        self.linear_layers= nn.Sequential(nn.Linear(xt_dim,linear_layer_dims[0],bias= True),
+                                          nn.BatchNorm1d(linear_layer_dims[0]),
                                           non_lin_module)
         #nn.BatchNorm1d(linear_layer_dims[0])
         for i in range(len(linear_layer_dims)-1):
-            self.linear_layers.append(nn.Linear(linear_layer_dims[i],linear_layer_dims[i+1],bias=False))
+            self.linear_layers.append(nn.Linear(linear_layer_dims[i],linear_layer_dims[i+1]))
+            self.linear_layers.append(nn.BatchNorm1d(linear_layer_dims[i + 1]))
             self.linear_layers.append(non_lin_module)
-            #self.linear_layers.append(nn.BatchNorm1d(linear_layer_dims[i+1])) <- not sure if this is desired
         # appending last layer which maps back to xt_dim
-        self.linear_layers.append(nn.Linear(linear_layer_dims[-1],zt_dim,bias= False))
-        self.linear_layers.append(non_lin_module)
+        self.linear_layers.append(nn.Linear(linear_layer_dims[-1],zt_dim,bias= True))
+        #self.linear_layers.append(non_lin_module) <- not sure if this is desired cause we are doing regression
         #self.linear_layers.append(nn.BatchNorm1d(xt_dim)) <- not sure if this is desired
 
 
@@ -89,8 +90,7 @@ class Inverse_Variance_Model(nn.Module):
         # Not sure if it's faster do the unsqueezing below or to just deal with this using masking - will have to test this
         D = (10/D.shape[1])*(D @ torch.transpose(D, dim0=1, dim1=2)) # Making Matrix symmetric and normalizing values closer to N(1,1)
 
-        D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.abs(torch.diagonal(D,dim1 = 1,dim2=2)),dim = 2)*torch.eye(D.shape[1])) + \
-            torch.transpose(torch.tril(D,diagonal=-1),dim0=1,dim1=2)
+        D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.abs(torch.diagonal(D,dim1 = 1,dim2=2)),dim = 2)*torch.eye(D.shape[1]))
 
         #D = torch.exp(-D)
-        return Compute_Block_Cholesky(D, B)
+        return D,B
