@@ -76,7 +76,7 @@ class Time_Series_Approx_Gaussian_First_Param(Approximate_Model):
         """
         self.L_D,self.L_B = self.inv_cov_model(x)
         return (x.shape[0]*x.shape[1]/2)*(1 + torch.log(2*torch.tensor(math.pi))) - \
-               torch.sum(torch.log(torch.diagonal(self.L_D,dim1 = 1,dim2=2)),dim=(1))
+               0.5*torch.sum(torch.log(torch.diagonal(self.L_D,dim1 = 1,dim2=2)),dim=(0,1))
 
     def get_mean_parameters(self):
         """

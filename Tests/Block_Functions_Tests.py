@@ -73,7 +73,7 @@ class Test_Block_Cholesky(unittest.TestCase):
         self.assertTrue(torch.allclose(L_torch_chol,L_block_chol)) # add assertion here
 
     def test_block_cholesky_non_diagonal_2_small_dim_unstable(self):
-        xt_dim = 3
+        xt_dim = 5
         time = 5
         L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)
         D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))

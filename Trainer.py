@@ -64,11 +64,10 @@ def train_model_epoch(loader,loss_fn,optimizer,scheduler,
       loss.backward()
       # Updating the weights
       optimizer.step()
-      #if batch_index %20 == 0:
-       # print("BATCH:")
-       # print(batch_index+1)
-       # print("model_loss for batch")
-       # print(loss.item())
+      # print("BATCH:")
+      # print(batch_index+1)
+      print("model_loss for batch")
+      print(loss.item())
 
   scheduler.step() # change learning rate after epoch with scheduler
   return loss
