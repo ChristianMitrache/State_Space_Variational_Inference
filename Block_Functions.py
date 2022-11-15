@@ -37,7 +37,7 @@ def Compute_Block_Cholesky(D: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tens
 def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> torch.Tensor:
     """
     Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, solve for L^{-1}x where L is cholesky
-    decomposition lower triangle
+    lower triangle.
     :param D: cholesky diagonal blocks tensor with shape Txnxn
     :param B: cholesky off-diagonal blocks with shape (T-1)xnxn
     :param x: tensor with shape mxTxn where m is the batch dimension.
@@ -45,11 +45,11 @@ def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> to
     """
     return_vec = torch.zeros((x.shape[0],x.shape[1],x.shape[2]))
     # Initial solution (without block B_i)
-    solve_i = torch.linalg.solve_triangular(D[0,:,:],x[:,0,:].T,upper = False).T
+    solve_i = torch.linalg.solve_triangular(D[0,:,:], x[:,0,:].T,upper = False).T
     return_vec[:,0,:] = solve_i
     # Iterating through rest of blocks with B_i, D_i present in linear system
     for i in range(1,D.shape[0]):
-        solve_i = torch.linalg.solve_triangular(D[i,:,:],x[:,i,:].T- B[i-1,:,:]@ solve_i.T,upper = False).T
+        solve_i = torch.linalg.solve_triangular(D[i,:,:], x[:,i,:].T- B[i-1,:,:]@ solve_i.T,upper = False).T
         return_vec[:,i,:] = solve_i
     return return_vec
 

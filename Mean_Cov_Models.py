@@ -60,7 +60,7 @@ class Inverse_Variance_Model(nn.Module):
         """
         super().__init__()
         self.zt_dim = zt_dim
-        self.model_B = Fully_Connected_Model(xt_dim,(zt_dim)**2,linear_layer_dims_B,non_lin_module)
+        self.model_B = Fully_Connected_Model(2*xt_dim,(zt_dim)**2,linear_layer_dims_B,non_lin_module)
         self.final_weights_B_z = nn.Parameter(torch.rand(size=(zt_dim, zt_dim), requires_grad=True))
         self.model_D = Fully_Connected_Model(xt_dim,zt_dim**2, linear_layer_dims_D, non_lin_module)
         self.final_weights_D_z = nn.Parameter(torch.rand(size=(zt_dim, zt_dim), requires_grad=True))
@@ -71,9 +71,7 @@ class Inverse_Variance_Model(nn.Module):
     def forward(self, x):
         """
         Computes forward pass and returns diagonal blocks of block cholesky decomp.
-        x should be a Txn tensor.
-
-        NOTE: THIS FUNCTION MIGHT NOT WORK FOR BATCHED TIME SERIES.
+        x should be a T x xt_dim tensor.
 
         returns a tuple of ((Tx n x n), (T-1 x n x n)) matrices representing the block matrices for the lower diagonal
         matrix of the inverse covariance.
@@ -81,16 +79,16 @@ class Inverse_Variance_Model(nn.Module):
 
         # reshaping before passing into linear models (not sure if I should do the reshaping after - maybe incorporate
         # some 2d convolutions? -consider convolutional network with large convolutional range?)
+        # Prepping inputs to model_B
 
         # Designing architecture to produce numerically stable matrices for cholesky decomposition. (by applying a batch normalization after)
-        B = self.final_weights_B_z * torch.reshape(self.model_B(x[:-1,:]),(x.shape[0]-1,self.zt_dim,self.zt_dim))
+        B = self.final_weights_B_z * torch.reshape(self.model_B(torch.cat((x[:-1,:],x[1:,:]),dim=1)),
+                                                   (x.shape[0]-1,self.zt_dim,self.zt_dim))
         D  = self.final_weights_D_z * torch.reshape(self.model_D(x), (x.shape[0],self.zt_dim, self.zt_dim))
 
-        # Making sure D is strictly positive definite,symmetric
-        # Not sure if it's faster do the unsqueezing below or to just deal with this using masking - will have to test this
-        D = (10/D.shape[1])*(D @ torch.transpose(D, dim0=1, dim1=2)) # Making Matrix symmetric and normalizing values closer to N(1,1)
-
-        D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.abs(torch.diagonal(D,dim1 = 1,dim2=2)),dim = 2)*torch.eye(D.shape[1]))
+        D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.abs(torch.diagonal(D,dim1=1, dim2=2)),
+                                                         dim=2) * torch.eye(D.shape[1])) + \
+            torch.transpose(torch.tril(D, diagonal=-1),dim0=1,dim1=2)
 
         #D = torch.exp(-D)
-        return D,B
+        return Compute_Block_Cholesky(D,B)

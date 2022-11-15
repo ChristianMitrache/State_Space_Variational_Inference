@@ -21,7 +21,6 @@ if __name__ == "__main__":
     true_Q = true_Q.T @ true_Q/true_Q.shape[0]
     true_Q = torch.tril(true_Q,diagonal=-1) + \
             torch.diag(torch.exp(torch.diag(true_Q))) + torch.tril(true_Q,diagonal=-1).T
-    print(true_Q.shape)
     true_d = torch.rand(xt_dim)
     # sampling from true Poisson LDS model.
     observed_time_series = Poisson_LDS.sample_from_Poisson_LDS(true_Q,true_A,true_C,true_d,time)

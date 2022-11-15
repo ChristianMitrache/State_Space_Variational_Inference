@@ -61,10 +61,10 @@ class Poisson_LDS_Expected_Likelihood(nn.Module):
         if epsilon_precision is None:
             # Making this positive semi-definite
             epsilon_precision = torch.rand((zt_dim, zt_dim))
-            epsilon_precision = epsilon_precision @ epsilon_precision.T
+            epsilon_precision = epsilon_precision.T @ epsilon_precision
             # Exponentiating diagonal entries to make it positive definite
             diag_mask = torch.diag(torch.ones(epsilon_precision.shape[0]))
-            epsilon_precision = diag_mask * torch.exp(torch.diag(epsilon_precision)) + (
+            epsilon_precision = diag_mask * torch.abs(torch.diag(epsilon_precision)) + (
                         1. - diag_mask) * epsilon_precision
         self.epsilon_precision = nn.Parameter(epsilon_precision, requires_grad=True)
 

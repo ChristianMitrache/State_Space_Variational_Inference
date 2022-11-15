@@ -71,7 +71,7 @@ class Time_Series_Approx_Gaussian_First_Param(Approximate_Model):
     def forward(self,x):
         """
         Implementing forward pass required by nn module.
-        :param x: observations from time series (Should be a time x dim_x vector)
+        :param x: observations from time series (Should be a batch x time x dim_x vector)
         :return:  entropy value of the normal distributions centered at each data-point in full time series.
         """
         self.L_D,self.L_B = self.inv_cov_model(x)

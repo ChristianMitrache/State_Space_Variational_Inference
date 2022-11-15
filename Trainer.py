@@ -22,10 +22,10 @@ class Approximate_Inference_Loss(Module):
         and the approximate model.
         :param n: number of samples to take when estimating expectation
         :param x: observations of the time series (a tensor of shape batch_time x x_dim)
-        :return: returns the KL divergence between approximate and user model.
+        :return: returns an estimate of the ELBO.
         """
         # Note: Sampling needs to be called after forward pass of approximate posterior!
-        return self.Approx_Post(x) + self.User_model(x,self.Approx_Post.Sample(n, x))
+        return -(self.Approx_Post(x) + self.User_model(x,self.Approx_Post.Sample(n, x)))
 
 
 # Dataloader for getting subsets of original time series
@@ -55,7 +55,6 @@ def train_model_epoch(loader,loss_fn,optimizer,scheduler,
   for batch_index, data in enumerate(loader):
       # Moving Data to GPU (and converting ints to floating points for training)
       data = data[0].float().to(device = device)
-
       # Forward pass:
       optimizer.zero_grad()
       loss = loss_fn(data, num_samples)
