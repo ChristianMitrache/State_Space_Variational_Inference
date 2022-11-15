@@ -90,11 +90,11 @@ class Test_Block_Cholesky(unittest.TestCase):
 
 #############################################################################################################
 
-class Test_Block_Mat_Vec_Cholesky(unittest.TestCase):
+class Test_Block_Mat_Vec(unittest.TestCase):
     """
     Testing the block matrix vector multiplication with values given by torch.
     """
-    def test_block_Mat_Vec_Cholesky_small(self):
+    def test_block_Mat_Vec_small(self):
         # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
         xt_dim = 5
         time = 10
@@ -112,7 +112,7 @@ class Test_Block_Mat_Vec_Cholesky(unittest.TestCase):
         self.assertTrue(torch.allclose(full_mat_vec.T,mat_vec)) # add assertion here
 
 
-    def test_block_Mat_Vec_Cholesky_big(self):
+    def test_block_Mat_Vec_big(self):
         # The reshaping into the big matrix for torch's matrix multiplication might cause a memory problem lol
         xt_dim = 100
         time = 100
