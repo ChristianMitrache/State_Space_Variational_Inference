@@ -14,8 +14,8 @@ def Compute_Block_Cholesky(D: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tens
     :param B: (T-1)xnxn tensor representing B nxn lower diagonal blocks of covariance matrix.
     :return: (diag,off_diag) where dim(diag): Txnxn and dim(off_diag): (T-1)xnxn
     """
-    diag_chol_blocks = torch.zeros(D.shape,dtype=D.dtype)
-    off_diag_chol_blocks = torch.zeros(B.shape)
+    diag_chol_blocks = torch.empty(D.shape,dtype=D.dtype)
+    off_diag_chol_blocks = torch.empty(B.shape,dtype = B.dtype)
     # Initial computation for
     A = D[0, :, :]  # Compute left-upper block (the very first one)
     for i in range(0, D.shape[0] - 1):
@@ -43,7 +43,7 @@ def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> to
     :param x: tensor with shape mxTxn where m is the batch dimension.
     :return: mxTxn tensor which solves the m is batch dimension.
     """
-    return_vec = torch.zeros((x.shape[0],x.shape[1],x.shape[2]))
+    return_vec = torch.empty((x.shape[0],x.shape[1],x.shape[2]),dtype = x.dtype)
     # Initial solution (without block B_i)
     solve_i = torch.linalg.solve_triangular(D[0,:,:], x[:,0,:].T,upper = False).T
     return_vec[:,0,:] = solve_i

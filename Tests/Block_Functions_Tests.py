@@ -45,11 +45,14 @@ class Test_Block_Cholesky(unittest.TestCase):
         self.assertTrue(torch.allclose(L_torch_chol,L_block_chol)) # add assertion here
 
     def test_block_cholesky_non_diagonal_2(self):
-        xt_dim = 5
-        time = 1000
-        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)+2
-        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
-        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)+2
+        xt_dim = 100
+        time = 100
+        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)*10
+        D = L@ torch.transpose(L,dim0=1,dim1=2)/xt_dim
+        D = torch.tril(D, diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D, dim1=1, dim2=2)),
+                                                          dim=2) * torch.eye(D.shape[1])) + \
+            torch.transpose(torch.tril(D, diagonal=-1), dim0=1, dim1=2)
+        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)*10
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
@@ -57,14 +60,18 @@ class Test_Block_Cholesky(unittest.TestCase):
         A = reshape_helper_D(D, B,lower = False)
         L_block_chol = reshape_helper_D(chol_tuple[0],chol_tuple[1],lower = True)
         L_torch_chol = torch.linalg.cholesky_ex(A)[0]
+        print(torch.isclose(L_torch_chol,L_block_chol))
         self.assertTrue(torch.allclose(L_torch_chol,L_block_chol)) # add assertion here
 
     def test_block_cholesky_non_diagonal_2_small_dim_stable(self):
         xt_dim = 3
         time = 5
-        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)+5
-        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
-        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)+5
+        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)*10
+        D = L@ torch.transpose(L,dim0=1,dim1=2)/xt_dim
+        D = torch.tril(D, diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D, dim1=1, dim2=2)),
+                                                          dim=2) * torch.eye(D.shape[1])) + \
+            torch.transpose(torch.tril(D, diagonal=-1), dim0=1, dim1=2)
+        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)*10
         # rearranging cat_tensor to represent it as 2-d Array
         chol_tuple = Compute_Block_Cholesky(D, B)
         A = reshape_helper_D(D, B,lower = False)
@@ -75,9 +82,12 @@ class Test_Block_Cholesky(unittest.TestCase):
     def test_block_cholesky_non_diagonal_2_small_dim_unstable(self):
         xt_dim = 5
         time = 5
-        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)
-        D = torch.exp(L@ torch.transpose(L,dim0=1,dim1=2))
-        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)
+        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)*10
+        D = L@ torch.transpose(L,dim0=1,dim1=2)/xt_dim
+        D = torch.tril(D, diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D, dim1=1, dim2=2)),
+                                                          dim=2) * torch.eye(D.shape[1])) + \
+            torch.transpose(torch.tril(D, diagonal=-1), dim0=1, dim1=2)
+        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)*10
         # Constructing matrix to feed into torch from this:
         #cat_tensor = torch.cat((D[:-1, :, :], B), dim=1)
         # rearranging cat_tensor to represent it as 2-d Array
@@ -143,13 +153,17 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
         xt_dim = 3
         time = 10
         batch = 2
-        L = torch.rand((time,xt_dim,xt_dim))
-        D = torch.abs(L@ torch.transpose(L,dim0=1,dim1=2))
-        B = torch.rand((time-1,xt_dim,xt_dim))
+        L = torch.rand((time,xt_dim,xt_dim),dtype = torch.float64)*10
+        D = L@ torch.transpose(L,dim0=1,dim1=2)/xt_dim
+        D = torch.tril(D, diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D, dim1=1, dim2=2)),
+                                                          dim=2) * torch.eye(D.shape[1])) + \
+            torch.transpose(torch.tril(D, diagonal=-1), dim0=1, dim1=2)
+        B = torch.rand((time-1,xt_dim,xt_dim),dtype = torch.float64)*10
 
         # Need to construct cholesky decomposition to get diagonal matrix that is lower-triangular
         D,B = Compute_Block_Cholesky(D,B)
-        full_vec = torch.rand((batch, time, xt_dim))
+        print(D.dtype)
+        full_vec = torch.rand((batch, time, xt_dim),dtype = torch.float64)
         # Computing block inverse
         Block_Solve = Block_Triangular_Solve(D, B, full_vec)
         # Reshaping to compute inverse with torch
@@ -159,8 +173,9 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
         torch_inverse_solve = torch.linalg.solve(torch.repeat_interleave(torch.unsqueeze(full_mat,0)
                                                                          ,repeats = batch,dim =0), full_vec_squeeze)
         block_solve_reshaped = torch.reshape(Block_Solve,(batch,xt_dim*time))
-        print(torch.any(torch.isnan(block_solve_reshaped)))
-        print(block_solve_reshaped.shape)
+        print("Any nans?")
+        print("-------------------------")
+        print(torch.any(torch.isnan(Block_Solve)))
         self.assertTrue(torch.allclose(torch_inverse_solve,block_solve_reshaped))
 
     def test_Block_Triangular_Solve_dimensions(self):
@@ -204,6 +219,7 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
         torch_inverse_solve = torch.linalg.solve(torch.repeat_interleave(torch.unsqueeze(full_mat, 0)
                                                                          , repeats=batch, dim=0), full_vec_squeeze)
         block_solve_reshaped = torch.reshape(Block_Solve, (batch, xt_dim * time))
+        print("Any nans?")
+        print("-------------------------")
         print(torch.any(torch.isnan(Block_Solve)))
-        print(torch.isclose(block_solve_reshaped[0,:],torch_inverse_solve[0,:]))
         self.assertTrue(torch.allclose(torch_inverse_solve, block_solve_reshaped))
