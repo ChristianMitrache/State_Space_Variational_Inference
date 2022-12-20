@@ -49,12 +49,15 @@ def Create_Time_Series_Data_Loader(X:torch.Tensor,batch_size:int,num_workers = 0
 
 
 def train_model_epoch(loader,loss_fn,optimizer,scheduler,
-                      num_samples = 100,device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+                      num_samples = 100,double = False,device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
   """Train model for one epoch and return loss"""
 
   for batch_index, data in enumerate(loader):
       # Moving Data to GPU (and converting ints to floating points for training)
-      data = data[0].float().to(device = device)
+      if double:
+        data = data[0].double().to(device = device)
+      else:
+          data = data[0].float().to(device=device)
       # Forward pass:
       optimizer.zero_grad()
       loss = loss_fn(data, num_samples)

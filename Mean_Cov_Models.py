@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Block_Functions import Compute_Block_Cholesky
+from Block_Functions import Block_Lower_Triangle
 
 class Fully_Connected_Model(nn.Module):
     '''
@@ -10,7 +10,7 @@ class Fully_Connected_Model(nn.Module):
         super().__init__()
         # creating sequential module which will be called later:
         # Note: Batch norms are not included might be interesting to experiment with this later
-        self.linear_layers= nn.Sequential(nn.Linear(xt_dim,linear_layer_dims[0],bias= True),
+        self.linear_layers= nn.Sequential(nn.Linear(xt_dim,linear_layer_dims[0]),
                                           nn.BatchNorm1d(linear_layer_dims[0]),
                                           non_lin_module)
         #nn.BatchNorm1d(linear_layer_dims[0])
@@ -60,9 +60,10 @@ class Inverse_Variance_Model(nn.Module):
         """
         super().__init__()
         self.zt_dim = zt_dim
+        self.xt_dim = xt_dim
         self.model_B = Fully_Connected_Model(2*xt_dim,(zt_dim)**2,linear_layer_dims_B,non_lin_module)
         self.final_weights_B_z = nn.Parameter(torch.rand(size=(zt_dim, zt_dim), requires_grad=True))
-        self.model_D = Fully_Connected_Model(xt_dim,zt_dim**2, linear_layer_dims_D, non_lin_module)
+        self.model_D = Fully_Connected_Model(xt_dim,int((zt_dim)*(zt_dim + 1)/2), linear_layer_dims_D, non_lin_module)
         self.final_weights_D_z = nn.Parameter(torch.rand(size=(zt_dim, zt_dim), requires_grad=True))
         self.non_linearity = non_lin_module
         self.batch_norm = torch.nn.BatchNorm1d(zt_dim,track_running_stats= False)
@@ -74,21 +75,32 @@ class Inverse_Variance_Model(nn.Module):
         x should be a T x xt_dim tensor.
 
         returns a tuple of ((Tx n x n), (T-1 x n x n)) matrices representing the block matrices for the lower diagonal
-        matrix of the inverse covariance.
+        matrix of the inverse covariance. (for the latent variables)
         """
 
         # reshaping before passing into linear models (not sure if I should do the reshaping after - maybe incorporate
         # some 2d convolutions? -consider convolutional network with large convolutional range?)
         # Prepping inputs to model_B
 
-        # Designing architecture to produce numerically stable matrices for cholesky decomposition. (by applying a batch normalization after)
-        B = self.final_weights_B_z * torch.reshape(self.model_B(torch.cat((x[:-1,:],x[1:,:]),dim=1)),
+       # Reshaping from NN output
+        B = torch.reshape(self.model_B(torch.cat((x[:-1,:],x[1:,:]),dim=1)),
                                                    (x.shape[0]-1,self.zt_dim,self.zt_dim))
-        D  = self.final_weights_D_z * torch.reshape(self.model_D(x), (x.shape[0],self.zt_dim, self.zt_dim))
 
-        D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.abs(torch.diagonal(D,dim1=1, dim2=2)),
-                                                         dim=2) * torch.eye(D.shape[1])) + \
-            torch.transpose(torch.tril(D, diagonal=-1),dim0=1,dim1=2)
+        # Reshaping from NN output
+        D = Block_Lower_Triangle(self.model_D(x),self.zt_dim)
 
-        #D = torch.exp(-D)
-        return Compute_Block_Cholesky(D,B)
+        # Making diagonal entries positive
+        diag_mask = torch.diag(torch.ones(D.shape[0]))
+        D = diag_mask * torch.abs(torch.diag(D)) + (
+                1. - diag_mask) * D
+
+        #D = torch.reshape(self.model_D(x), (x.shape[0],self.zt_dim, self.zt_dim))*10
+
+        # Estimating Covariance with this
+        #D = (D-torch.mean(D, dim = 0)) @ torch.transpose((D-torch.mean(D, dim = 0)), dim0=1, dim1=2)/D.shape[1]
+        #D = D @ torch.transpose(D, dim0=1, dim1=2)/self.xt_dim
+        #D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D,dim1=1, dim2=2)),
+                                                         #dim=2) * torch.eye(D.shape[1])) + \
+        #    torch.transpose(torch.tril(D, diagonal=-1),dim0=1,dim1=2)
+
+        return (D,B)

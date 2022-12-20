@@ -11,6 +11,10 @@ import numpy as np
 
 if __name__ == "__main__":
     # Constructing Random True PLDS:
+    defaultdouble = True
+    if defaultdouble:
+        torch.set_default_dtype(torch.float64) # Option to set default to double precision (reducing speed)
+
     xt_dim = 30
     zt_dim = 10
     time = 200
@@ -39,7 +43,7 @@ if __name__ == "__main__":
     KL_Divergence = Trainer.Approximate_Inference_Loss(Approx_model,PLDS_model)
 
     # hyper-parameters for training:
-    batch_size = 100
+    batch_size = 101
     num_epochs = 100
     num_samples = 100
     lr = 1e-4
@@ -66,7 +70,7 @@ if __name__ == "__main__":
         print(i)
         print("batch loss at end of epoch:")
         last_batch_loss = Trainer.train_model_epoch(time_series_loader, KL_Divergence, optimizer, scheduler,
-                                                    num_samples=num_samples).item()
+                                                    num_samples=num_samples,double=defaultdouble).item()
         print(last_batch_loss)
         training_losses.append(last_batch_loss)
 

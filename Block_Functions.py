@@ -1,7 +1,7 @@
 import torch
 from functorch import vmap
 from typing import Tuple
-
+import numpy as np
 # This file contains important functions for computing block matrix operations without storing the entire matrix.
 
 @torch.jit.script
@@ -17,7 +17,7 @@ def Compute_Block_Cholesky(D: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tens
     diag_chol_blocks = torch.empty(D.shape,dtype=D.dtype)
     off_diag_chol_blocks = torch.empty(B.shape,dtype = B.dtype)
     # Initial computation for
-    A = D[0, :, :]  # Compute left-upper block (the very first one)
+    A = D[0, :, :]
     for i in range(0, D.shape[0] - 1):
         L_A = torch.linalg.cholesky_ex(A)[0]
         diag_chol_blocks[i, :, :] = L_A
@@ -26,10 +26,6 @@ def Compute_Block_Cholesky(D: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tens
         A = D[i + 1, :, :] - bottom_left @ bottom_left.T  # Compute left-lower block of cholesky block
 
     diag_chol_blocks[D.shape[0]-1,:,:]  = torch.linalg.cholesky_ex(A)[0]  # appending last diagonal chol block
-
-    #diag_chol_blocks = torch.stack(diag_chol_blocks, dim=0)
-    #off_diag_chol_blocks = torch.stack(off_diag_chol_blocks, dim=0)
-
     return (diag_chol_blocks, off_diag_chol_blocks)
 
 
@@ -52,6 +48,24 @@ def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> to
         solve_i = torch.linalg.solve_triangular(D[i,:,:], x[:,i,:].T- B[i-1,:,:]@ solve_i.T,upper = False).T
         return_vec[:,i,:] = solve_i
     return return_vec
+
+
+def Block_Lower_Triangle(x:torch.Tensor,dim: int) -> torch.Tensor:
+    """
+        Function that takes in a vector of size T*n*(n+1)/2 and outputs a corresponding batch of
+    lower triangles.
+
+    :param x: tensor of size (T) x (n*(n+1)/2)
+    :param T: batch size (in time)
+    :param dim: dimension of latent vector
+    :return: returns a tensor of size (T x dim x dim) representing the batches of the entries of the lower triangles.
+    """
+    return_tensor = torch.zeros(x.shape[0],dim,dim)
+    torch_indices = torch.tril_indices(dim, dim, offset=0)
+    return_tensor[:,torch_indices[0],torch_indices[1]] = x
+    return return_tensor
+
+
 
 def Block_Mat_Vec_Cholesky(L_D:torch.Tensor, L_B:torch.Tensor, x:torch.Tensor)-> torch.Tensor:
     """
