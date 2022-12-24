@@ -84,7 +84,7 @@ class Poisson_LDS_Expected_Likelihood(nn.Module):
         """
         This method must be
         :param x: a tensor of size dim_x vector corresponding to the observations of the time series
-        :param z: a tensor of size batch_size T x dim_z corresponding to a sample drawn from the approximate posterior.
+        :param z: a tensor of size batch_size x T x dim_z corresponding to a sample drawn from the approximate posterior.
         :return: Expected Log Joint Likelihood: P_{\theta}(x,z) (averaged over the batches)
         """
         if batched:

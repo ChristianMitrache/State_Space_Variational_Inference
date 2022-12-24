@@ -28,6 +28,30 @@ def Compute_Block_Cholesky(D: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tens
     diag_chol_blocks[D.shape[0]-1,:,:]  = torch.linalg.cholesky_ex(A)[0]  # appending last diagonal chol block
     return (diag_chol_blocks, off_diag_chol_blocks)
 
+@torch.jit.script
+def Block_Triangular_Solve_new(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> torch.Tensor:
+    """
+    Given cholesky diagonal blocks D, cholesky off-diagonal blocks B, solve for L^{-1}x where L is cholesky
+    lower triangle.
+
+    Note: THIS FUNCTION MUTATES THE D matrix!
+    :param D: cholesky diagonal blocks tensor with shape Txnxn
+    :param B: cholesky off-diagonal blocks with shape (T-1)xnxn
+    :param x: tensor with shape mxTxn where m is the batch dimension.
+    :return: mxTxn tensor which solves the m is batch dimension.
+    """
+    diag_index = torch.arange(start=0, end=D.shape[1])
+    diagonals = D[:, diag_index, diag_index]
+    D[:, diag_index, diag_index] = 1
+    return_vec = torch.empty((x.shape[0],x.shape[1],x.shape[2]),dtype = x.dtype)
+    # Initial solution (without block B_i)
+    solve_i = torch.linalg.solve_triangular(D[0,:,:], x[:,0,:].T,upper = False,unitriangular = True).T
+    return_vec[:,0,:] = solve_i
+    # Iterating through rest of blocks with B_i, D_i present in linear system
+    for i in range(1,D.shape[0]):
+        solve_i = torch.linalg.solve_triangular(D[i,:,:], x[:,i,:].T- B[i-1,:,:]@ solve_i.T,upper = False, unitriangular = True).T
+        return_vec[:,i,:] = solve_i
+    return return_vec/diagonals
 
 @torch.jit.script
 def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> torch.Tensor:
@@ -49,7 +73,7 @@ def Block_Triangular_Solve(D:torch.Tensor, B:torch.Tensor, x:torch.Tensor) -> to
         return_vec[:,i,:] = solve_i
     return return_vec
 
-
+@torch.jit.script
 def Block_Lower_Triangle(x:torch.Tensor,dim: int) -> torch.Tensor:
     """
         Function that takes in a vector of size T*n*(n+1)/2 and outputs a corresponding batch of
@@ -67,7 +91,7 @@ def Block_Lower_Triangle(x:torch.Tensor,dim: int) -> torch.Tensor:
 
 
 
-def Block_Mat_Vec_Cholesky(L_D:torch.Tensor, L_B:torch.Tensor, x:torch.Tensor)-> torch.Tensor:
+def Block_Lower_Triangle_Mat_Vec(L_D:torch.Tensor, L_B:torch.Tensor, x:torch.Tensor)-> torch.Tensor:
     """
     Given cholesky diagonal blocks L_D, cholesky off-diagonal blocks L_B, compute matrix vector product in batches
     :param L_D: cholesky diagonal blocks tensor with shape Txnxn

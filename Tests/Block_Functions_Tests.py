@@ -2,7 +2,7 @@ import unittest
 from timeit import timeit
 from Mean_Cov_Models import Inverse_Variance_Model
 import torch
-from Block_Functions import Compute_Block_Cholesky,Block_Mat_Vec_Cholesky,Block_Triangular_Solve
+from Block_Functions import Compute_Block_Cholesky,Block_Lower_Triangle_Mat_Vec,Block_Triangular_Solve
 
 
 def reshape_helper_D(L_D, L_B, lower = True):
@@ -133,7 +133,7 @@ class Test_Block_Mat_Vec(unittest.TestCase):
         #B = torch.zeros(((time-1,xt_dim,xt_dim)))
         B = torch.rand((time-1,xt_dim,xt_dim))+5
         full_vec = torch.rand((batch, time, xt_dim))
-        mat_vec = Block_Mat_Vec_Cholesky(D, B, full_vec)
+        mat_vec = Block_Lower_Triangle_Mat_Vec(D, B, full_vec)
         full_mat = reshape_helper_D(D, B,lower = False)
         full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
         full_mat_vec = full_mat@full_vec_squeeze.T
@@ -151,7 +151,7 @@ class Test_Block_Mat_Vec(unittest.TestCase):
         #B = torch.zeros(((time-1,xt_dim,xt_dim)))
         B = torch.rand((time-1,xt_dim,xt_dim))+5
         full_vec = torch.rand((batch, time, xt_dim))
-        mat_vec = Block_Mat_Vec_Cholesky(D, B, full_vec)
+        mat_vec = Block_Lower_Triangle_Mat_Vec(D, B, full_vec)
         full_mat = reshape_helper_D(D, B,lower = False)
         full_vec_squeeze = torch.reshape(full_vec,(batch,time*xt_dim))
         full_mat_vec = full_mat@full_vec_squeeze.T
@@ -233,13 +233,13 @@ class Test_Block_Inverse_Solve(unittest.TestCase):
         D, B = Compute_Block_Cholesky(D, B)
         full_vec = torch.rand((batch, time, xt_dim),dtype = torch.float32)
         # Computing block inverse
-        Block_Solve = Block_Triangular_Solve(D, B, full_vec)
         # Reshaping to compute inverse with torch
         full_mat = reshape_helper_D(D, B, lower=True)
         full_vec_squeeze = torch.reshape(full_vec, (batch, time * xt_dim))
         # Computing Inverse with torch
         torch_inverse_solve = torch.linalg.solve(torch.repeat_interleave(torch.unsqueeze(full_mat, 0)
                                                                          , repeats=batch, dim=0), full_vec_squeeze)
+        Block_Solve = Block_Triangular_Solve(D, B, full_vec)
         block_solve_reshaped = torch.reshape(Block_Solve, (batch, xt_dim * time))
         print("Any nans?")
         print("-------------------------")

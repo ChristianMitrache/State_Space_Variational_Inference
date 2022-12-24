@@ -9,6 +9,7 @@ import Mean_Cov_Models
 from matplotlib.pyplot import plot
 import numpy as np
 
+
 if __name__ == "__main__":
     # Constructing Random True PLDS:
     defaultdouble = True
@@ -17,7 +18,7 @@ if __name__ == "__main__":
 
     xt_dim = 30
     zt_dim = 10
-    time = 200
+    time = 100
     # instantiating some random true parameters:
     true_A = torch.rand((zt_dim,zt_dim))
     true_C = torch.rand((xt_dim,zt_dim))
@@ -43,9 +44,9 @@ if __name__ == "__main__":
     KL_Divergence = Trainer.Approximate_Inference_Loss(Approx_model,PLDS_model)
 
     # hyper-parameters for training:
-    batch_size = 101
+    batch_size = 33
     num_epochs = 100
-    num_samples = 100
+    num_samples = 10000
     lr = 1e-4
 
     # Setting Device (GPU/CPU)
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     time_series_loader = Trainer.Create_Time_Series_Data_Loader(observed_time_series, batch_size)
     KL_Divergence.to(device)
     # optimizer = optim.SGD(model.parameters(),lr = lr_sgd,momentum = 0.85)
-    optimizer = optim.Adam(KL_Divergence.parameters(), lr=lr,eps =1e-6)
+    optimizer = optim.Adam(KL_Divergence.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
 
     # Training Loop:

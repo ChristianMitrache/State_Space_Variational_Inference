@@ -30,6 +30,7 @@ class Fully_Connected_Model(nn.Module):
         :param x: tensor of size T x x_dim
         :return: tensor of size T x z_dim
         """
+        print(x.shape)
         return self.linear_layers(x)
 
 class Fully_Connected_Mean_Model(Fully_Connected_Model):
@@ -69,6 +70,16 @@ class Inverse_Variance_Model(nn.Module):
         self.batch_norm = torch.nn.BatchNorm1d(zt_dim,track_running_stats= False)
         self.softplus = torch.nn.Softplus()
 
+        # Initializing weights to orthogonal
+        #def init_weights(m):
+        #    if type(m) == nn.Linear:
+        #        torch.nn.init.orthogonal(m.weight)
+
+        #self.model_D.apply(init_weights)
+        #self.model_B.apply(init_weights)
+
+
+
     def forward(self, x):
         """
         Computes forward pass and returns diagonal blocks of block cholesky decomp.
@@ -89,18 +100,8 @@ class Inverse_Variance_Model(nn.Module):
         # Reshaping from NN output
         D = Block_Lower_Triangle(self.model_D(x),self.zt_dim)
 
-        # Making diagonal entries positive
-        diag_mask = torch.diag(torch.ones(D.shape[0]))
-        D = diag_mask * torch.abs(torch.diag(D)) + (
-                1. - diag_mask) * D
-
-        #D = torch.reshape(self.model_D(x), (x.shape[0],self.zt_dim, self.zt_dim))*10
-
-        # Estimating Covariance with this
-        #D = (D-torch.mean(D, dim = 0)) @ torch.transpose((D-torch.mean(D, dim = 0)), dim0=1, dim1=2)/D.shape[1]
-        #D = D @ torch.transpose(D, dim0=1, dim1=2)/self.xt_dim
-        #D = torch.tril(D,diagonal=-1) + (torch.unsqueeze(torch.exp(torch.diagonal(D,dim1=1, dim2=2)),
-                                                         #dim=2) * torch.eye(D.shape[1])) + \
-        #    torch.transpose(torch.tril(D, diagonal=-1),dim0=1,dim1=2)
+        # Making diagonal entries positive/ Adding a large positive constant
+        diag_index = torch.arange(start=0, end=self.zt_dim)
+        D[:,diag_index,diag_index] = torch.exp(D[:,diag_index,diag_index])
 
         return (D,B)
